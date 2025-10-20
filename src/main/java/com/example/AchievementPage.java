@@ -19,12 +19,11 @@ public class AchievementPage {
     private VBox view;
 
     private static class Achievement {
-        String id, title, reward, rewardColor, timestamp, type;
+        String title, reward, rewardColor, timestamp, type;
         String proofImage;
         List<String> avatars; // placeholder, using strings for urls if needed
 
-        Achievement(String id, String title, String reward, String rewardColor, String proofImage, String timestamp, String type, List<String> avatars) {
-            this.id = id;
+        Achievement(String title, String reward, String rewardColor, String proofImage, String timestamp, String type, List<String> avatars) {
             this.title = title;
             this.reward = reward;
             this.rewardColor = rewardColor;
@@ -36,13 +35,13 @@ public class AchievementPage {
     }
 
     private List<Achievement> achievements = Arrays.asList(
-            new Achievement("1", "Won $20 Blackjack Dare", "+15", "#00D4AA",
+            new Achievement("Won $20 Blackjack Dare", "+15", "#00D4AA",
                     "https://via.placeholder.com/200x100?text=Blackjack+Proof",
                     "03:08 PM EDT, Oct 17, 2025", "win", Arrays.asList(null, null, null)),
-            new Achievement("2", "Lost $5 Dice Roll", "-5", "#FF6666",
+            new Achievement("Lost $5 Dice Roll", "-5", "#FF6666",
                     "https://via.placeholder.com/200x100?text=Dice+Proof",
                     "02:15 PM EDT, Oct 17, 2025", "loss", Arrays.asList(null, null, null)),
-            new Achievement("3", "Won $10 Rock Paper Scissors", "+20", "#00D4AA",
+            new Achievement("Won $10 Rock Paper Scissors", "+20", "#00D4AA",
                     "https://via.placeholder.com/200x100?text=RPS+Proof",
                     "01:30 PM EDT, Oct 17, 2025", "win", Arrays.asList(null, null, null))
     );
@@ -114,6 +113,11 @@ public class AchievementPage {
         title.setTextFill(Color.WHITE);
         title.setFont(Font.font("System", 16));
 
+        // Type
+        Label typeLabel = new Label("Type: " + ach.type.substring(0,1).toUpperCase() + ach.type.substring(1));
+        typeLabel.setTextFill(Color.LIGHTGRAY);
+        typeLabel.setFont(Font.font("System", 12));
+
         // Avatars
         HBox avatars = new HBox(8);
         for (int i = 0; i < 3; i++) {
@@ -147,7 +151,7 @@ public class AchievementPage {
         timestamp.setTextFill(Color.LIGHTGRAY);
         timestamp.setFont(Font.font("System", 12));
 
-        card.getChildren().addAll(title, avatars, proofImage, timestamp);
+        card.getChildren().addAll(title, typeLabel, avatars, proofImage, timestamp);
 
         return new VBox(cardContainer);
     }

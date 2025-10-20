@@ -12,8 +12,6 @@ import javafx.geometry.Pos;
 import javafx.scene.text.Font;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.effect.InnerShadow;
 import javafx.util.Duration;
@@ -163,13 +161,20 @@ public class InteractiveDareCards extends Application {
         hoverTransition.setToX(1.1);
         hoverTransition.setToY(1.1);
         actionButton.setOnMouseEntered(e -> hoverTransition.play());
-        actionButton.setOnMouseExited(e -> hoverTransition.setToX(1.0).setToY(1.0).play());
+        actionButton.setOnMouseExited(e -> {
+            hoverTransition.setToX(1.0);
+            hoverTransition.setToY(1.0);
+            hoverTransition.play();
+        });
 
         // Click Animation (Pulse)
-        FillTransition pulseTransition = new FillTransition(Duration.millis(300), actionButton, resultColor, Color.web("#FFFFFF"));
-        pulseTransition.setCycleCount(2);
-        pulseTransition.setAutoReverse(true);
-        actionButton.setOnMousePressed(e -> pulseTransition.play());
+        Timeline pulseTimeline = new Timeline(
+            new KeyFrame(Duration.ZERO, new KeyValue(actionButton.styleProperty(), "-fx-background-color: " + toRgbString(resultColor))),
+            new KeyFrame(Duration.millis(150), new KeyValue(actionButton.styleProperty(), "-fx-background-color: " + toRgbString(Color.web("#FFFFFF")))),
+            new KeyFrame(Duration.millis(300), new KeyValue(actionButton.styleProperty(), "-fx-background-color: " + toRgbString(resultColor)))
+        );
+        pulseTimeline.setCycleCount(2);
+        actionButton.setOnMousePressed(e -> pulseTimeline.play());
         actionButton.setOnMouseReleased(e -> actionButton.setStyle("-fx-background-color: " + toRgbString(resultColor) + "; -fx-text-fill: #000000; -fx-font-size: 14px; -fx-padding: 5 20; -fx-border-radius: 10;"));
 
         // Interactive Actions
