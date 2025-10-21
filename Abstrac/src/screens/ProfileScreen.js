@@ -22,8 +22,10 @@ export default function ProfileScreen(props) {
   const cardColor = useThemeColor({}, 'card');
   const textColor = useThemeColor({}, 'text');
   const accentColor = useThemeColor({}, 'accent');
+  const borderColor = useThemeColor({}, 'border');
+  const secondaryTextColor = useThemeColor({}, 'tabIconDefault');
 
-  const dynamicStyles = getDynamicStyles(backgroundColor, cardColor, textColor, accentColor);
+  const dynamicStyles = getDynamicStyles(backgroundColor, cardColor, textColor, accentColor, borderColor, secondaryTextColor);
   const [referralData, setReferralData] = useState({});
   const [userPosts, setUserPosts] = useState([]);
   const [postsLoading, setPostsLoading] = useState(true);
@@ -51,8 +53,11 @@ export default function ProfileScreen(props) {
   const dares = useDares();
   const { activities, loading: activitiesLoading } = useUserActivities(profileUser?.id || user?.id, 3);
 
-  // Filter user's dares (assuming dares from useDares are all dares, filter by creator or participants)
-  const userDares = isOwnProfile ? dares.filter(dare => dare.creatorId === user?.id || dare.participants.includes(user?.id)) : [];
+  // Filter user's dares (only show completed dares in profile section)
+  const userDares = isOwnProfile ? dares.filter(dare =>
+    (dare.creatorId === user?.id || dare.participants.includes(user?.id)) &&
+    dare.status === 'completed'
+  ) : [];
 
   // Load user posts
   useEffect(() => {
@@ -167,7 +172,7 @@ export default function ProfileScreen(props) {
             style={[dynamicStyles.tab, activeTab === 'posts' && dynamicStyles.activeTab]}
             onPress={() => setActiveTab('posts')}
           >
-            <Ionicons name="grid-outline" size={20} color={activeTab === 'posts' ? accentColor : '#888'} />
+            <Ionicons name="grid-outline" size={20} color={activeTab === 'posts' ? accentColor : secondaryTextColor} />
             <ThemedText style={[dynamicStyles.tabText, activeTab === 'posts' && dynamicStyles.activeTabText]}>
               Posts
             </ThemedText>
@@ -176,7 +181,7 @@ export default function ProfileScreen(props) {
             style={[dynamicStyles.tab, activeTab === 'dares' && dynamicStyles.activeTab]}
             onPress={() => setActiveTab('dares')}
           >
-            <Ionicons name="flash-outline" size={20} color={activeTab === 'dares' ? accentColor : '#888'} />
+            <Ionicons name="flash-outline" size={20} color={activeTab === 'dares' ? accentColor : secondaryTextColor} />
             <ThemedText style={[dynamicStyles.tabText, activeTab === 'dares' && dynamicStyles.activeTabText]}>
               Dares
             </ThemedText>
@@ -203,28 +208,50 @@ export default function ProfileScreen(props) {
             />
           ) : (
             <View style={dynamicStyles.emptyContainer}>
-              <Ionicons name="images-outline" size={64} color="#ccc" />
+              <Ionicons name="images-outline" size={64} color={secondaryTextColor} />
               <ThemedText style={dynamicStyles.emptyText}>No posts yet</ThemedText>
             </View>
           )
         ) : (
-          // Dares view (simplified)
-          <View style={dynamicStyles.postsGrid}>
+          // Dares view with player cards
+          <View style={dynamicStyles.daresGrid}>
             {userDares.length > 0 ? (
-              userDares.slice(0, 9).map((dare) => (
+              userDares.map((dare) => (
                 <TouchableOpacity
-                  key={dare.id}
-                  style={dynamicStyles.postItem}
+                  key={dare.dare_id}
+                  style={dynamicStyles.dareCard}
                   onPress={() => navigation.navigate('DareDetails', { dare })}
                 >
-                  <View style={[dynamicStyles.postImage, { backgroundColor: accentColor, justifyContent: 'center', alignItems: 'center' }]}>
-                    <Ionicons name="flash" size={24} color="white" />
+                  <View style={dynamicStyles.dareCardHeader}>
+                    <Ionicons name="flash" size={16} color={accentColor} />
+                    <ThemedText style={dynamicStyles.dareType}>
+                      {dare.type === 'personal' ? 'Personal' : dare.type === 'challenge' ? 'Challenge' : 'Group'}
+                    </ThemedText>
+                  </View>
+                  <ThemedText style={dynamicStyles.dareTitle} numberOfLines={2}>
+                    {dare.title}
+                  </ThemedText>
+                  <ThemedText style={dynamicStyles.dareDescription} numberOfLines={2}>
+                    {dare.description}
+                  </ThemedText>
+                  <View style={dynamicStyles.dareCardFooter}>
+                    <ThemedText style={dynamicStyles.dareStake}>
+                      ${dare.stake}
+                    </ThemedText>
+                    <View style={[dynamicStyles.statusBadge,
+                      { backgroundColor: dare.status === 'active' ? accentColor :
+                                       dare.status === 'completed' ? '#4CAF50' : '#F44336' }]}>
+                      <ThemedText style={dynamicStyles.statusText}>
+                        {dare.status === 'active' ? 'Active' :
+                         dare.status === 'completed' ? 'Done' : 'Pending'}
+                      </ThemedText>
+                    </View>
                   </View>
                 </TouchableOpacity>
               ))
             ) : (
               <View style={dynamicStyles.emptyContainer}>
-                <Ionicons name="flash-outline" size={64} color="#ccc" />
+                <Ionicons name="flash-outline" size={64} color={secondaryTextColor} />
                 <ThemedText style={dynamicStyles.emptyText}>No dares yet</ThemedText>
               </View>
             )}
@@ -261,9 +288,9 @@ const getActivityText = (activity) => {
   }
 };
 
-const getDynamicStyles = (backgroundColor, cardColor, textColor, accentColor) => StyleSheet.create({
-  safeContainer: { flex: 1, backgroundColor: backgroundColor },
-  container: { flex: 1, backgroundColor: backgroundColor },
+const getDynamicStyles = (backgroundColor, cardColor, textColor, accentColor, borderColor, secondaryTextColor) => StyleSheet.create({
+  safeContainer: { flex: 1, backgroundColor: '#000000' },
+  container: { flex: 1, backgroundColor: '#000000' },
   settingsButtonContainer: { position: 'absolute', top: 10, right: 20, flexDirection: 'row', gap: 15, zIndex: 10 },
   header: {
     flexDirection: 'row',
@@ -287,16 +314,16 @@ const getDynamicStyles = (backgroundColor, cardColor, textColor, accentColor) =>
   statsContainer: { flexDirection: 'row', justifyContent: 'space-around', width: '100%', marginBottom: 16 },
   statItem: { alignItems: 'center' },
   statValue: { fontSize: 18, fontWeight: 'bold', color: textColor },
-  statLabel: { fontSize: 12, color: '#888', marginTop: 4 },
+  statLabel: { fontSize: 12, color: secondaryTextColor, marginTop: 4 },
 
   // Edit Profile Button
   editProfileButton: {
-    backgroundColor: cardColor,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 6,
     paddingHorizontal: 32,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: '#ddd'
+    borderColor: accentColor
   },
   editProfileText: { fontSize: 14, fontWeight: '600' },
 
@@ -310,16 +337,74 @@ const getDynamicStyles = (backgroundColor, cardColor, textColor, accentColor) =>
   messageText: { fontSize: 14, fontWeight: '600', color: 'white' },
 
   // Tab Navigation
-  tabContainer: { flexDirection: 'row', borderTopWidth: 0.5, borderTopColor: '#ddd', borderBottomWidth: 0.5, borderBottomColor: '#ddd', marginTop: 10 },
+  tabContainer: { flexDirection: 'row', borderTopWidth: 0.5, borderTopColor: borderColor, borderBottomWidth: 0.5, borderBottomColor: borderColor, marginTop: 10 },
   tab: { flex: 1, alignItems: 'center', paddingVertical: 12 },
   activeTab: { borderBottomWidth: 1, borderBottomColor: accentColor },
-  tabText: { fontSize: 14, color: '#888' },
+  tabText: { fontSize: 14, color: secondaryTextColor },
   activeTabText: { color: accentColor },
 
   // Post Grid
   postsGrid: { flex: 1 },
   postItem: { flex: 1, margin: 1 },
   postImage: { width: '100%', aspectRatio: 1 },
+
+  // Dares Grid and Cards
+  daresGrid: {
+    flex: 1,
+    padding: 16,
+  },
+  dareCard: {
+    backgroundColor: cardColor,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: borderColor,
+  },
+  dareCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  dareType: {
+    fontSize: 12,
+    color: accentColor,
+    fontWeight: '600',
+    marginLeft: 6,
+    textTransform: 'uppercase',
+  },
+  dareTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: textColor,
+    marginBottom: 8,
+  },
+  dareDescription: {
+    fontSize: 14,
+    color: secondaryTextColor,
+    marginBottom: 12,
+    lineHeight: 20,
+  },
+  dareCardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  dareStake: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: accentColor,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusText: {
+    fontSize: 12,
+    color: 'white',
+    fontWeight: '600',
+  },
 
   // Empty State
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -341,7 +426,6 @@ const getDynamicStyles = (backgroundColor, cardColor, textColor, accentColor) =>
   actionText: { fontSize: 16, marginLeft: 8 },
   subtitle: { fontSize: 14, marginBottom: 8, color: '#888' },
   dareItem: { marginVertical: 4 },
-  dareTitle: { fontSize: 14, fontWeight: '600' },
   dareMeta: { fontSize: 12, color: '#666' },
   viewMore: { fontSize: 12, color: accentColor, textAlign: 'center', marginTop: 8 },
   emptyText: { fontSize: 14, color: '#666', textAlign: 'center', marginTop: 8 },

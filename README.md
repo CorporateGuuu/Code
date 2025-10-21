@@ -61,11 +61,15 @@ If you are working directly in the browser without a bundler please use the `.mj
 </script>
 ```
 
-## Installation
+### Installation
 
 ```sh
 npm install bson
 ```
+
+## Development Setup
+
+This project uses Java 21 (LTS) for development. Make sure you have Java 21 installed or Gradle will download an appropriate JDK automatically via its toolchain support.
 
 ## Documentation
 

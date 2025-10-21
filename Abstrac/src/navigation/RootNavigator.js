@@ -31,6 +31,8 @@ import WalletScreen from '../screens/WalletScreen';
 import WinnerScreen from '../screens/WinnerScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
+import PostDetailsScreen from '../screens/PostDetailsScreen';
+import PayoutPunishmentScreen from '../screens/PayoutPunishmentScreen';
 import PrivacySecurityScreen from '../screens/PrivacySecurityScreen';
 import HelpSupportScreen from '../screens/HelpSupportScreen';
 
@@ -60,8 +62,8 @@ function MainTabs() {
           if (route.name === 'Frames') {
             return <MaterialIcons name="filter-frames" size={size ?? 20} color={color ?? "#cccccc"} />;
           }
-          if (route.name === 'Messages') {
-            return <Icon name={focused ? 'chatbubbles' : 'chatbubbles-outline'} size={size ?? 20} color={color ?? "#cccccc"} />;
+          if (route.name === 'PayoutPunishments') {
+            return <MaterialIcons name="account-balance-wallet" size={size ?? 20} color={color ?? "#cccccc"} />;
           }
           if (route.name === 'Profile') {
             return <Icon name={focused ? 'person' : 'person-outline'} size={size ?? 20} color={color ?? "#cccccc"} />;
@@ -80,7 +82,7 @@ function MainTabs() {
       <Tab.Screen name="Home" component={ActivityFeedScreen} options={{ tabBarLabel: "Home" }} />
       <Tab.Screen name="Challenges" component={ChallengesScreen} options={{ tabBarLabel: "Challenges" }} />
       <Tab.Screen name="Frames" component={FrameMarketScreen} options={{ tabBarLabel: "Frames" }} />
-      <Tab.Screen name="Messages" component={ChatListScreen} options={{ tabBarLabel: "Messages" }} />
+      <Tab.Screen name="PayoutPunishments" component={PayoutPunishmentScreen} options={{ tabBarLabel: "Payout & Punishments" }} />
       <Tab.Screen name="Profile" component={ProfileScreen} options={{ tabBarLabel: "Profile" }} />
     </Tab.Navigator>
   );
@@ -114,6 +116,7 @@ const RootNavigator = ({ user }) => {
       <Stack.Screen name="Wallet" component={WalletScreen} options={{ headerShown: true, headerRight: HeaderRight, headerStyle: { backgroundColor: '#000000' }, headerTintColor: '#ffffff' }} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ headerShown: true, headerRight: HeaderRight, headerStyle: { backgroundColor: '#000000' }, headerTintColor: '#ffffff' }} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ headerShown: true, headerRight: HeaderRight, headerStyle: { backgroundColor: '#000000' }, headerTintColor: '#ffffff' }} />
+      <Stack.Screen name="PostDetails" component={PostDetailsScreen} options={{ headerShown: true, headerRight: HeaderRight, headerStyle: { backgroundColor: '#000000' }, headerTintColor: '#ffffff' }} />
       <Stack.Screen name="Privacy" component={PrivacySecurityScreen} options={{ headerShown: true, headerRight: HeaderRight, headerStyle: { backgroundColor: '#000000' }, headerTintColor: '#ffffff' }} />
       <Stack.Screen name="Help" component={HelpSupportScreen} options={{ headerShown: true, headerRight: HeaderRight, headerStyle: { backgroundColor: '#000000' }, headerTintColor: '#ffffff' }} />
       <Stack.Screen name="MyDares" component={PlaceholderScreen} options={{ headerShown: true, headerRight: HeaderRight, headerStyle: { backgroundColor: '#000000' }, headerTintColor: '#ffffff' }} />

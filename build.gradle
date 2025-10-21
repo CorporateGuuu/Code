@@ -1,20 +1,21 @@
 plugins {
     id 'java'
     id 'application'
-    id 'org.openjfx.javafxplugin' version '0.0.6'
 }
 
 group = 'com.example'
 version = '1.0.0'
 
 java {
-    sourceCompatibility = '17'
-    targetCompatibility = '17'
-}
+    // Prefer using a JVM toolchain so Gradle can run compilation with Java 21 when available.
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
 
-javafx {
-    version = '17'
-    modules = ['javafx.controls']
+    // Keep explicit source/target compatibility for tools that read these properties.
+    sourceCompatibility = '21'
+    targetCompatibility = '21'
+    modularity.inferModulePath = true
 }
 
 repositories {
@@ -22,9 +23,11 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.openjfx:javafx-controls:17'
+    implementation 'org.openjfx:javafx-base:21.0.1:mac'
+    implementation 'org.openjfx:javafx-graphics:21.0.1:mac'
+    implementation 'org.openjfx:javafx-controls:21.0.1:mac'
 }
 
 application {
-    mainClass = 'com.example.Main'
+    mainModule = 'com.example'
 }

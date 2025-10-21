@@ -14,9 +14,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#000000",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
@@ -31,6 +30,17 @@
     },
     "plugins": [
       [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#667eea",
+          "defaultChannel": "default",
+          "sounds": [
+            "./assets/sounds/notification.wav"
+          ]
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",
@@ -42,6 +52,19 @@
           }
         }
       ]
-    ]
+    ],
+    "notification": {
+      "icon": "./assets/images/icon.png",
+      "color": "#667eea",
+      "iosDisplayInForeground": true,
+      "androidMode": "default",
+      "androidCollapsedTitle": "Abstrac"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "9055b737-3fcf-4132-9955-4467a7139002"
+      }
+    },
+    "owner": "corporateguuu"
   }
 }
