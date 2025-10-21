@@ -1,5 +1,6 @@
 import { useContext, useState, useEffect } from "react";
-import { Image, StyleSheet, TouchableOpacity, View, FlatList, SafeAreaView, ScrollView, TextInput } from "react-native";
+import { Image, StyleSheet, TouchableOpacity, View, FlatList, ScrollView, TextInput } from "react-native";
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import Icon from '@expo/vector-icons/Ionicons';
