@@ -1,89 +1,49 @@
-import { initializeApp } from 'firebase/app';
-import { getAnalytics } from 'firebase/analytics';
-import { getDatabase, connectDatabaseEmulator } from 'firebase/database';
-import { initializeAuth, getAuth, getReactNativePersistence, onAuthStateChanged, signInAnonymously } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
-import { getFunctions, httpsCallable, connectFunctionsEmulator } from "firebase/functions";
-import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
-
-// Replace with your Firebase config from console.firebase.google.com
-const firebaseConfig = {
-  apiKey: "AIzaSyBqWXnD-cbovdoeE96atVXwUABFICFliRU",
-  authDomain: "abstrac-8e36e.firebaseapp.com",
-  databaseURL: "https://abstrac-8e36e-default-rtdb.firebaseio.com/",
-  projectId: "abstrac-8e36e",
-  storageBucket: "abstrac-8e36e.firebasestorage.app",
-  messagingSenderId: "630430127671",
-  appId: "1:630430127671:web:6159fcfd806118b15e51b2",
-  measurementId: "G-5RFNQZ7XCQ"
+// Firebase config - environment variables with fallbacks
+export const firebaseConfig = {
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || "AIzaSyDwilKNK-FmUqYcgEeXpoilq6KKdw_TLT4",
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || "abstrac-8e36e.firebaseapp.com",
+  databaseURL: process.env.EXPO_PUBLIC_FIREBASE_DATABASE_URL || "https://abstrac-8e36e-rtdb.firebaseio.com/",
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || "abstrac-8e36e",
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || "abstrac-8e36e.firebasestorage.app",
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "630430127671",
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || "1:630430127671:web:6159fcfd806118b15e51b2",
+  measurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID || "G-5RFNQZ7XCQ"
 };
 
+// Initialize Firebase synchronously - this is the standard approach for React Native
+import { initializeApp } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
+import { getDatabase } from 'firebase/database';
+import { getFunctions } from 'firebase/functions';
+
 const app = initializeApp(firebaseConfig);
-// Conditionally initialize analytics to prevent errors in unsupported environments
-export let analytics = null;
-(async () => {
-  try {
-    const { isSupported } = await import('firebase/analytics');
-    if (await isSupported()) {
-      analytics = getAnalytics(app);
-    }
-  } catch (error) {
-    console.warn('Analytics not supported in this environment:', error);
-  }
-})();
-export const database = getDatabase(app);
 
-// Initialize auth only once - prevent HMR reinitialization
-let auth;
-try {
-  auth = initializeAuth(app, {
-    persistence: getReactNativePersistence(ReactNativeAsyncStorage)
-  });
-} catch (error) {
-  console.warn('Auth already initialized:', error);
-  auth = getAuth(app);
-}
-export { auth };
-
+export const auth = getAuth(app);
 export const db = getFirestore(app);
+export const database = getDatabase(app);
 export const functions = getFunctions(app);
 
-// optional: connect to local emulator in dev
-if (__DEV__) {
-  try {
-    // Only connect once
-    console.log('Connecting to Firebase functions emulator...');
-    connectFunctionsEmulator(functions, "localhost", 5001);
+// Analytics can be added later if needed
+export const analytics = null;
 
-    console.log('Connecting to Firebase database emulator...');
-    connectDatabaseEmulator(database, "localhost", 9000);
-  } catch (error) {
-    console.log('Emulator connection failed:', error.message);
-  }
-}
-
+// Firebase utility functions
 export async function ensureSignedIn() {
-  return new Promise((resolve) => {
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        await signInAnonymously(auth);
-      }
-      unsub();
-      resolve(auth.currentUser);
-    });
-  });
+  return auth.currentUser;
 }
 
-// helpers for callable functions
 export function callAcceptDare(payload) {
-  return httpsCallable(functions, "acceptDare")(payload);
+  return functions.httpsCallable("acceptDare")(payload);
 }
+
 export function callSubmitProof(payload) {
-  return httpsCallable(functions, "submitProof")(payload);
+  return functions.httpsCallable("submitProof")(payload);
 }
+
 export function callCompleteDare(payload) {
-  return httpsCallable(functions, "completeDare")(payload);
+  return functions.httpsCallable("completeDare")(payload);
 }
+
 export function callGetBet(payload) {
-  return httpsCallable(functions, "getBet")(payload);
+  return functions.httpsCallable("getBet")(payload);
 }

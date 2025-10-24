@@ -9,6 +9,7 @@ import ProfileScreen from "../screens/ProfileScreen";
 import CreateDareScreen from "../screens/CreateDareScreen";
 import ReferralScreen from "../screens/ReferralScreen";
 import PostDetailsScreen from "../screens/PostDetailsScreen";
+import PostCarouselScreen from "../screens/PostCarouselScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -23,6 +24,7 @@ export default function AppNavigator() {
         <Stack.Screen name="CreateDare" component={CreateDareScreen} />
         <Stack.Screen name="Referrals" component={ReferralScreen} />
         <Stack.Screen name="PostDetails" component={PostDetailsScreen} />
+        <Stack.Screen name="PostCarousel" component={PostCarouselScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

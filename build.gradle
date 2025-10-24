@@ -1,6 +1,7 @@
 plugins {
     id 'java'
     id 'application'
+    id 'org.openjfx.javafxplugin' version '0.1.0'
 }
 
 group = 'com.example'
@@ -22,10 +23,12 @@ repositories {
     mavenCentral()
 }
 
+javafx {
+    version = '21.0.1'
+    modules = ['javafx.controls', 'javafx.graphics', 'javafx.base']
+}
+
 dependencies {
-    implementation 'org.openjfx:javafx-base:21.0.1:mac'
-    implementation 'org.openjfx:javafx-graphics:21.0.1:mac'
-    implementation 'org.openjfx:javafx-controls:21.0.1:mac'
 }
 
 application {

@@ -1,141 +1,377 @@
-import { useState, useEffect } from "react";
-import dayjs from "dayjs";
-import { auth } from "../config/firebase";
-import AcceptDareButton from "./AcceptDareButton";
-import ProofSubmissionModal from "./ProofSubmissionModal";
+import React from 'react';
+import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import Carousel from 'react-native-snap-carousel'; // Install: yarn add react-native-snap-carousel
 
-export default function DareCard({ dare, userData = null }) {
-  const [timeLeft, setTimeLeft] = useState("");
-  const [showProofModal, setShowProofModal] = useState(false);
+const { width: screenWidth } = Dimensions.get('window');
 
-  useEffect(() => {
-    if (dare.deadline) {
-      const interval = setInterval(() => {
-        const now = dayjs();
-        const deadline = dayjs(dare.deadline);
-        const diff = deadline.diff(now, "hour", true);
+// Define themes based on screenshot analysis (gradients from top to bottom)
+const themes = {
+  redOrange: ['#FF6B6B', '#D63031', '#A20F0F'], // Vibrant red-orange for high-purity stones
+  blueGray: ['#74B9FF', '#2980B9', '#2C3E50'], // Cool blue-gray for medium-purity
+  purpleBlue: ['#A29BFE', '#6A5ACD', '#483D8B'], // Purple-blue for low-purity or alternate
+};
 
-        if (diff <= 0) setTimeLeft("Expired");
-        else if (diff < 1) setTimeLeft(`${Math.floor(diff * 60)} min left`);
-        else setTimeLeft(`${Math.floor(diff)} hr left`);
-      }, 60000);
-      return () => clearInterval(interval);
-    }
-  }, [dare.deadline]);
+// Function to calculate days between dates
+const getDaysBetween = (startDate, endDate) => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const diffTime = Math.abs(end - start);
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+};
 
-  const statusColor =
-    dare.status === "open"
-      ? "text-blue-400"
-      : dare.status === "active"
-      ? "text-yellow-400"
-      : dare.status === "completed"
-      ? "text-green-400"
-      : dare.status === "cancelled"
-      ? "text-red-400"
-      : "text-gray-500";
+// Function to calculate time commitment score
+const calculateTimeCommitmentScore = (days) => {
+  if (days > 90) return 5;
+  if (days >= 30) return 3;
+  return 1;
+};
 
-  const currentUser = auth.currentUser;
-  const isParticipant = dare.participants?.some(p => p.user_id === currentUser?.uid);
+// Function to calculate purity score with new factors
+const calculatePurityScore = (difficulty, likes, comments, wagerValue, startDate, endDate, opponentStrength, publicVerification) => {
+  // Engagement Score: (likes / 10) + (comments / 5), capped at 10
+  const engagementScore = Math.min((likes / 10) + (comments / 5), 10);
+  // Wager Value Score: 1-5 based on predefined wager hierarchy
+  const wagerValueScore = Math.max(1, Math.min(5, wagerValue));
+  // Time Commitment Score: Based on days between dates
+  const days = getDaysBetween(startDate, endDate);
+  const timeCommitmentScore = calculateTimeCommitmentScore(days);
+  // Opponent Strength Score: 1-5 based on opponent metrics
+  const opponentStrengthScore = Math.max(1, Math.min(5, opponentStrength));
+  // Public Verification Score: 0-3 based on proof level
+  const publicVerificationScore = Math.max(0, Math.min(3, publicVerification));
 
-  // Calculate totals
-  const completedCount = dare.participants?.filter(p => p.completed).length || 0;
-  const totalParticipants = dare.participants?.length || 0;
-  const totalVotes = dare.participants?.reduce((sum, p) => sum + (p.votes || 0), 0) || 0;
+  // Purity Score = (Difficulty * 0.3) + (Engagement * 0.3) + (Wager * 0.2) + (Time * 0.1) + (Opponent * 0.05) + (Verification * 0.05)
+  const purityScore = (difficulty * 0.3) + (engagementScore * 0.3) + (wagerValueScore * 0.2) +
+    (timeCommitmentScore * 0.1) + (opponentStrengthScore * 0.05) + (publicVerificationScore * 0.05);
+  return purityScore;
+};
+
+// Function to determine theme based on purity score
+const getThemeByPurity = (purityScore) => {
+  if (purityScore > 7.5) return 'redOrange';
+  if (purityScore >= 4) return 'blueGray';
+  return 'purpleBlue';
+};
+
+// Function to determine stone reward based on purity
+const getStoneReward = (purityScore) => {
+  if (purityScore > 7.5) return { type: 'Diamond', amount: 1 }; // High purity
+  if (purityScore >= 4) return { type: 'Sapphire', amount: 3 }; // Medium purity
+  return { type: 'Quartz', amount: 5 };                        // Low purity
+};
+
+// DareCard Component
+const DareCard = ({ dare, userData }) => {
+  // Destructure dare object, handling both individual and group dares
+  const {
+    dare_id,
+    title,
+    creator_id,
+    entry_stake,
+    status,
+    created_at,
+    deadline,
+    winner_id,
+    participants,
+    dareText,
+    startDate,
+    endDate,
+    winnerUsername,
+    loserUsername,
+    wagerText,
+    difficulty,
+    likes,
+    comments,
+    wagerValue,
+    opponentStrength,
+    publicVerification
+  } = dare;
+
+  // For group dares, use title as dareText, created_at as startDate, deadline as endDate, etc.
+  const actualDareText = dareText || title;
+  const actualStartDate = startDate || created_at;
+  const actualEndDate = endDate || deadline;
+  const actualWagerText = wagerText || `Entry stake: $${entry_stake}`;
+  const actualDifficulty = difficulty || 5; // Default if not provided
+  const actualLikes = likes || 0;
+  const actualComments = comments || 0;
+  const actualWagerValue = wagerValue || entry_stake || 1;
+  const actualOpponentStrength = opponentStrength || 3;
+  const actualPublicVerification = publicVerification || 1;
+
+  const purityScore = calculatePurityScore(actualDifficulty, actualLikes, actualComments, actualWagerValue, actualStartDate, actualEndDate, actualOpponentStrength, actualPublicVerification);
+  const theme = getThemeByPurity(purityScore);
+  const { type: stoneType, amount: stoneAmount } = getStoneReward(purityScore);
 
   return (
-    <div className="bg-gradient-to-b from-[#1B1B1B] to-[#0E0E0E] border border-gray-700 rounded-2xl p-4 mb-4 shadow-md transition-all">
-      <h3 className="text-white font-semibold text-center mb-3">{dare.title}</h3>
+    <LinearGradient
+      colors={themes[theme]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.cardContainer}
+    >
+      {/* Dare Description */}
+      <Text style={styles.dareText}>{actualDareText}</Text>
 
-      {/* Creator and Status */}
-      <div className="flex justify-between items-center mb-3">
-        <div className="flex items-center gap-2">
-          <span className="text-gray-400 text-sm">Creator:</span>
-          <span className="text-gray-300 text-sm">@{dare.participants?.find(p => p.user_id === dare.creator_id)?.username || dare.creator_id}</span>
-        </div>
-        <div className={`text-right font-medium text-xs ${statusColor}`}>
-          {dare.status.toUpperCase()}
-        </div>
-      </div>
+      {/* Date Row */}
+      <View style={styles.row}>
+        <Text style={styles.diamond}>💎</Text>
+        <Text style={styles.date}>{actualStartDate}</Text>
+        <Text style={styles.separator}>--</Text>
+        <Text style={styles.date}>{actualEndDate}</Text>
+        <Text style={styles.diamond}>💎</Text>
+      </View>
 
-      {/* Deadline */}
-      {dare.deadline && dare.status !== "completed" && dare.status !== "cancelled" && (
-        <div className="text-center text-gray-400 text-sm mb-3">
-          Deadline: {dayjs(dare.deadline).format("MMM D, h:mm A")}
-          {dare.status === "active" && <div className="text-yellow-400">{timeLeft}</div>}
-        </div>
+      {/* For group dares, render participants; for individual, winner/loser */}
+      {participants ? (
+        participants.map((participant, index) => (
+          <View key={index} style={styles.row}>
+            <Text style={styles.diamond}>💎</Text>
+            <Text style={styles.username}>{participant.username}</Text>
+            <Text style={participant.completed ? styles.dots : styles.xMark}>
+              {participant.completed ? '✔' : '×'}
+            </Text>
+            <Text style={styles.diamond}>💎</Text>
+          </View>
+        ))
+      ) : (
+        <>
+          {/* Winner Row */}
+          <View style={styles.row}>
+            <Text style={styles.diamond}>💎</Text>
+            <Text style={styles.dots}>•••••</Text>
+            <Text style={styles.username}>{winnerUsername}</Text>
+            <Text style={styles.dots}>•••••</Text>
+            <Text style={styles.diamond}>💎</Text>
+          </View>
+
+          {/* Loser Row */}
+          <View style={styles.row}>
+            <Text style={styles.diamond}>💎</Text>
+            <Text style={styles.xMark}>×</Text>
+            <Text style={styles.username}>{loserUsername}</Text>
+            <Text style={styles.xMark}>×</Text>
+            <Text style={styles.diamond}>💎</Text>
+          </View>
+        </>
       )}
 
-      {/* Entry Stake */}
-      <div className="flex justify-center items-center text-gray-400 text-sm mb-3">
-        <div>Entry Stake: 💰 {dare.entry_stake}</div>
-      </div>
+      {/* Wager */}
+      <Text style={styles.wagerText}>{actualWagerText}</Text>
 
-      {/* Participants */}
-      <div className="mb-3">
-        <div className="text-gray-400 text-sm mb-2">Participants ({totalParticipants})</div>
-        <div className="space-y-2 max-h-32 overflow-y-auto">
-          {dare.participants?.map((participant) => (
-            <div key={participant.user_id} className="flex justify-between items-center bg-[#2A2A2A] rounded-lg p-2">
-              <div className="flex items-center gap-2">
-                <img src={participant.avatar} alt="" className="w-6 h-6 rounded-full border border-gray-600" />
-                <span className="text-gray-300 text-sm">@{participant.username}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                {participant.completed && (
-                  <span className="text-green-400 text-xs">✓ Completed</span>
-                )}
-                {participant.proof_url && (
-                  <span className="text-blue-400 text-xs">📎 Proof</span>
-                )}
-                <span className="text-yellow-400 text-xs">❤️ {participant.votes || 0}</span>
-              </div>
-            </div>
-          )) || <div className="text-gray-500 text-sm">No participants yet</div>}
-        </div>
-      </div>
-
-      {/* Summary Stats */}
-      <div className="flex justify-between items-center text-gray-400 text-xs mb-3 border-t border-gray-700 pt-2">
-        <div>Completed: {completedCount}/{totalParticipants}</div>
-        <div>Total Votes: {totalVotes}</div>
-      </div>
-
-      {/* Winner */}
-      {dare.winner_id && (
-        <div className="text-center text-green-400 font-medium text-sm mb-2">
-          Winner: @{dare.participants?.find(p => p.user_id === dare.winner_id)?.username || dare.winner_id}
-        </div>
-      )}
-
-      {/* Action Buttons */}
-      <div className="flex gap-2">
-        {!isParticipant && dare.status === "open" && (
-          <AcceptDareButton dare={dare} userData={userData} />
-        )}
-        {isParticipant && dare.status === "active" && !dare.participants?.find(p => p.user_id === currentUser.uid)?.completed && (
-          <button
-            onClick={() => setShowProofModal(true)}
-            className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium text-white text-sm"
-          >
-            Submit Proof
-          </button>
-        )}
-        {isParticipant && dare.status === "active" && dare.participants?.find(p => p.user_id === currentUser.uid)?.completed && (
-          <div className="flex-1 text-center text-green-400 text-sm py-2">Proof Submitted</div>
-        )}
-        {isParticipant && dare.status === "active" && completedCount > 0 && (
-          <button className="flex-1 py-2 bg-yellow-600 hover:bg-yellow-700 rounded-lg font-medium text-white text-sm">
-            Vote ({completedCount} proofs)
-          </button>
-        )}
-      </div>
-
-      {/* Proof Submission Modal */}
-      <ProofSubmissionModal
-        isVisible={showProofModal}
-        onClose={() => setShowProofModal(false)}
-        dare={dare}
-      />
-    </div>
+      {/* Optional: Display Purity Info (for debugging or UI) */}
+      <Text style={styles.purityText}>
+        Purity: {purityScore.toFixed(2)} (Stone: {stoneAmount} {stoneType})
+      </Text>
+    </LinearGradient>
   );
-}
+};
+
+const styles = StyleSheet.create({
+  cardContainer: {
+    width: screenWidth * 0.9,
+    padding: 20,
+    borderRadius: 30, // Matches the soft rounded corners in images
+    marginVertical: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 5, // Subtle glow/shadow effect
+    alignItems: 'center',
+  },
+  dareText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 15,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 10,
+    paddingHorizontal: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)', // Semi-transparent overlay for rows as in images
+    borderRadius: 15,
+    paddingVertical: 8,
+  },
+  diamond: {
+    fontSize: 14,
+    color: '#FFF',
+    opacity: 0.8,
+  },
+  date: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '400',
+  },
+  separator: {
+    color: '#FFF',
+    fontSize: 14,
+    marginHorizontal: 10,
+  },
+  dots: {
+    color: '#FFF',
+    fontSize: 14,
+    opacity: 0.6,
+    marginHorizontal: 10,
+  },
+  username: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  xMark: {
+    color: '#FFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginHorizontal: 10,
+    opacity: 0.8,
+  },
+  wagerText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '500',
+    textAlign: 'center',
+    marginTop: 10,
+  },
+  purityText: {
+    color: '#FFF',
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 5,
+    opacity: 0.7,
+  },
+});
+
+// Example Usage in a Carousel (for each post as a carousel of cards)
+// Assume you have an array of dare data per post
+const PostCarousel = ({ dares }) => {
+  const renderItem = ({ item }) => (
+    <View style={{ alignItems: 'center' }}>
+      {/* Post Header (e.g., "winner beat loser") */}
+      <Text style={postStyles.header}>{`${item.winnerUsername.replace('@', '')} beat ${item.loserUsername.replace('@', '')}`}</Text>
+
+      <DareCard dare={item} />
+
+      {/* Interactions (likes, comments) */}
+      <View style={postStyles.interactions}>
+        <Text style={postStyles.icon}>💬 + {item.comments}</Text>
+        <Text style={postStyles.icon}>❤️ {item.likes}</Text>
+        <Text style={postStyles.icon}>•••</Text>
+      </View>
+
+      {/* Sample Comments */}
+      {item.sampleComments.map((comment, index) => (
+        <Text key={index} style={postStyles.comment}>{comment}</Text>
+      ))}
+    </View>
+  );
+
+  return (
+    <Carousel
+      data={dares}
+      renderItem={renderItem}
+      sliderWidth={screenWidth}
+      itemWidth={screenWidth * 0.95}
+      loop={true}
+      autoplay={false}
+    />
+  );
+};
+
+const postStyles = StyleSheet.create({
+  header: {
+    color: '#FFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    textAlign: 'left',
+    width: '100%',
+    paddingLeft: 20,
+  },
+  interactions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    width: '100%',
+    paddingLeft: 20,
+    marginTop: 10,
+  },
+  icon: {
+    color: '#FFF',
+    fontSize: 14,
+    marginRight: 15,
+    opacity: 0.8,
+  },
+  comment: {
+    color: '#FFF',
+    fontSize: 14,
+    textAlign: 'left',
+    width: '100%',
+    paddingLeft: 20,
+    marginTop: 5,
+  },
+});
+
+// Sample Data (based on your screenshots, map themes to stone purity/amount in your logic)
+const sampleDares = [
+  {
+    dareText: 'I will climb a Level 8 rock climbing wall',
+    startDate: '3/7/24',
+    endDate: '10/3/25',
+    winnerUsername: '@lukehoooton',
+    loserUsername: '@maxplatt',
+    wagerText: 'Buy the bar a round',
+    difficulty: 9, // 1-10 scale
+    likes: 76,
+    comments: 25,
+    wagerValue: 4, // 1-5 scale
+    opponentStrength: 4, // 1-5 based on opponent's rank
+    publicVerification: 2, // 0-3 based on proof (e.g., photo)
+    sampleComments: ['lukehoooton unreal.', "maxplatt can't believe you actually did it. well done"],
+  },
+  {
+    dareText: 'S&P will crash by the end of September',
+    startDate: '7/30/25',
+    endDate: '10/1/25',
+    winnerUsername: '@mattbraun',
+    loserUsername: '@kublaii',
+    wagerText: 'Pay for a round of golf',
+    difficulty: 6,
+    likes: 431,
+    comments: 35,
+    wagerValue: 3,
+    opponentStrength: 3,
+    publicVerification: 1,
+    sampleComments: ['haydnthurman LFG', 'mattbraun nooo', 'brendengroess beat ethangood'],
+  },
+  {
+    dareText: 'SLC Fashion show IG post will get less than 3k likes',
+    startDate: '5/5/25',
+    endDate: '10/1/25',
+    winnerUsername: '@colebrunn',
+    loserUsername: '@mattgubler1',
+    wagerText: "Take a 10 second pull of Burnett's",
+    difficulty: 2,
+    likes: 43,
+    comments: 35,
+    wagerValue: 2,
+    opponentStrength: 2,
+    publicVerification: 0,
+    sampleComments: ['mattgubler1 LFG', 'colebrunn nooo', 'quitwithjones'],
+  },
+];
+
+// Example usage in data processing
+const daresWithThemes = sampleDares.map(dare => ({
+  ...dare,
+  theme: getThemeByPurity(calculatePurityScore(dare.difficulty, dare.likes, dare.comments, dare.wagerValue, dare.startDate, dare.endDate, dare.opponentStrength, dare.publicVerification)),
+}));
+
+// In your feed screen, render <PostCarousel dares={sampleDares} /> or integrate into FlatList
+
+export { DareCard, PostCarousel, sampleDares, daresWithThemes, themes, getThemeByPurity };

@@ -1,17 +1,15 @@
 import { useContext, useState, useEffect } from "react";
-import { Image, StyleSheet, TouchableOpacity, View, FlatList, ScrollView, TextInput } from "react-native";
+import { Image, StyleSheet, TouchableOpacity, View, FlatList } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
-import Icon from '@expo/vector-icons/Ionicons';
-import { Picker } from '@react-native-picker/picker';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../config/firebase';
 import { AuthContext } from '../context/AuthContext';
 import { getUserReferralData } from '../services/referralService';
 import { useThemeColor } from '../hooks/use-theme-color';
 import { ThemedView } from '../components/themed-view';
 import { ThemedText } from '../components/themed-text';
-import { useDares } from '../hooks/useDares';
-import { useUserActivities } from '../hooks/useUserActivities';
 import { getUserPosts } from '../services/postService';
 
 export default function ProfileScreen(props) {
@@ -30,35 +28,40 @@ export default function ProfileScreen(props) {
   const [referralData, setReferralData] = useState({});
   const [userPosts, setUserPosts] = useState([]);
   const [postsLoading, setPostsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('posts');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
-  const [filters, setFilters] = useState({
-    contentType: 'All',
-    dateRange: 'All',
-    myPosts: false,
-  });
-
-  // Stories data (mock)
-  const stories = [
-    { id: '1', user: '@willsamrick', image: 'https://randomuser.me/api/portraits/men/1.jpg' },
-    { id: '2', user: '@frankvecchie', image: 'https://randomuser.me/api/portraits/men/2.jpg' },
-    { id: '3', user: '@mattbraun', image: 'https://randomuser.me/api/portraits/men/3.jpg' },
-    { id: '4', user: '@brendengroess', image: 'https://randomuser.me/api/portraits/men/4.jpg' },
-  ];
 
   const profileUser = route.params?.user || user;
   const isOwnProfile = !route.params?.user;
+  const [followersCount, setFollowersCount] = useState(0);
+  const [winRate, setWinRate] = useState(0);
 
-  // Hook calls for profile sections
-  const dares = useDares();
-  const { activities, loading: activitiesLoading } = useUserActivities(profileUser?.id || user?.id, 3);
+  // Calculate win rate and load followers count
+  useEffect(() => {
+    const calculateWinRate = () => {
+      if (profileUser?.totalDaresCompleted > 0) {
+        const rate = ((profileUser?.wins || 0) / profileUser.totalDaresCompleted) * 100;
+        setWinRate(Math.round(rate));
+      } else {
+        setWinRate(0);
+      }
+    };
 
-  // Filter user's dares (only show completed dares in profile section)
-  const userDares = isOwnProfile ? dares.filter(dare =>
-    (dare.creatorId === user?.id || dare.participants.includes(user?.id)) &&
-    dare.status === 'completed'
-  ) : [];
+    const loadFollowersCount = async () => {
+      if (profileUser?.id) {
+        try {
+          // Get followers count from Firestore
+          const followersQuery = collection(db, 'users', profileUser.id, 'followers');
+          const followersSnap = await getDocs(followersQuery);
+          setFollowersCount(followersSnap.size);
+        } catch (error) {
+          console.error('Error loading followers count:', error);
+          setFollowersCount(0);
+        }
+      }
+    };
+
+    calculateWinRate();
+    loadFollowersCount();
+  }, [profileUser]);
 
   // Load user posts
   useEffect(() => {
@@ -124,7 +127,7 @@ export default function ProfileScreen(props) {
           <TouchableOpacity onPress={() => navigation.navigate('Privacy')}>
             <Ionicons name="settings-outline" size={24} color={accentColor} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={logout}>
+          <TouchableOpacity onPress={() => logout()}>
             <Ionicons name="log-out-outline" size={24} color={accentColor} />
           </TouchableOpacity>
         </View>
@@ -133,27 +136,22 @@ export default function ProfileScreen(props) {
       <ThemedView style={dynamicStyles.container}>
         {/* Profile Header */}
         <View style={dynamicStyles.profileHeader}>
-          <Image source={{ uri: profileUser.avatar }} style={dynamicStyles.avatar} />
-          <ThemedText style={dynamicStyles.username}>{profileUser.username || '@you'}</ThemedText>
-          <ThemedText style={dynamicStyles.bio}>
-            Level {profileUser.level} • {profileUser.currentStreak || 0} day streak 🏆
-          </ThemedText>
+          {/* Avatar with side stats */}
+          <View style={dynamicStyles.avatarContainer}>
+            <View style={dynamicStyles.avatarStatLeft}>
+              <ThemedText style={dynamicStyles.avatarStatValue}>{winRate}%</ThemedText>
+              <ThemedText style={dynamicStyles.avatarStatLabel}>Win Rate</ThemedText>
+            </View>
 
-          {/* Stats Row */}
-          <View style={dynamicStyles.statsContainer}>
-            <View style={dynamicStyles.statItem}>
-              <ThemedText style={dynamicStyles.statValue}>{userPosts.length}</ThemedText>
-              <ThemedText style={dynamicStyles.statLabel}>Posts</ThemedText>
-            </View>
-            <View style={dynamicStyles.statItem}>
-              <ThemedText style={dynamicStyles.statValue}>{profileUser.totalDaresCompleted || 0}</ThemedText>
-              <ThemedText style={dynamicStyles.statLabel}>Dares</ThemedText>
-            </View>
-            <View style={dynamicStyles.statItem}>
-              <ThemedText style={dynamicStyles.statValue}>{profileUser.wins || 0}</ThemedText>
-              <ThemedText style={dynamicStyles.statLabel}>Wins</ThemedText>
+            <Image source={{ uri: profileUser.avatar }} style={dynamicStyles.avatar} />
+
+            <View style={dynamicStyles.avatarStatRight}>
+              <ThemedText style={dynamicStyles.avatarStatValue}>{followersCount}</ThemedText>
+              <ThemedText style={dynamicStyles.avatarStatLabel}>Friends</ThemedText>
             </View>
           </View>
+
+          <ThemedText style={dynamicStyles.username}>{profileUser.username || '@you'}</ThemedText>
 
           {/* Action Button */}
           {isOwnProfile ? (
@@ -167,95 +165,27 @@ export default function ProfileScreen(props) {
           )}
         </View>
 
-        {/* Tab Navigation */}
-        <View style={dynamicStyles.tabContainer}>
-          <TouchableOpacity
-            style={[dynamicStyles.tab, activeTab === 'posts' && dynamicStyles.activeTab]}
-            onPress={() => setActiveTab('posts')}
-          >
-            <Ionicons name="grid-outline" size={20} color={activeTab === 'posts' ? accentColor : secondaryTextColor} />
-            <ThemedText style={[dynamicStyles.tabText, activeTab === 'posts' && dynamicStyles.activeTabText]}>
-              Posts
-            </ThemedText>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[dynamicStyles.tab, activeTab === 'dares' && dynamicStyles.activeTab]}
-            onPress={() => setActiveTab('dares')}
-          >
-            <Ionicons name="flash-outline" size={20} color={activeTab === 'dares' ? accentColor : secondaryTextColor} />
-            <ThemedText style={[dynamicStyles.tabText, activeTab === 'dares' && dynamicStyles.activeTabText]}>
-              Dares
-            </ThemedText>
-          </TouchableOpacity>
-        </View>
-
         {/* Content Area */}
-        {activeTab === 'posts' ? (
-          postsLoading ? (
-            <View style={dynamicStyles.emptyContainer}>
-              <ThemedText>Loading posts...</ThemedText>
-            </View>
-          ) : userPosts.length > 0 ? (
-            <FlatList
-              style={dynamicStyles.postsGrid}
-              data={userPosts}
-              keyExtractor={(item) => item.id}
-              numColumns={3}
-              renderItem={({ item }) => (
-                <TouchableOpacity style={dynamicStyles.postItem} onPress={() => navigation.navigate('PostDetails', { post: item })}>
-                  <Image source={{ uri: item.image || profileUser.avatar }} style={dynamicStyles.postImage} />
-                </TouchableOpacity>
-              )}
-            />
-          ) : (
-            <View style={dynamicStyles.emptyContainer}>
-              <Ionicons name="images-outline" size={64} color={secondaryTextColor} />
-              <ThemedText style={dynamicStyles.emptyText}>No posts yet</ThemedText>
-            </View>
-          )
-        ) : (
-          // Dares view with player cards
-          <View style={dynamicStyles.daresGrid}>
-            {userDares.length > 0 ? (
-              userDares.map((dare) => (
-                <TouchableOpacity
-                  key={dare.dare_id}
-                  style={dynamicStyles.dareCard}
-                  onPress={() => navigation.navigate('DareDetails', { dare })}
-                >
-                  <View style={dynamicStyles.dareCardHeader}>
-                    <Ionicons name="flash" size={16} color={accentColor} />
-                    <ThemedText style={dynamicStyles.dareType}>
-                      {dare.type === 'personal' ? 'Personal' : dare.type === 'challenge' ? 'Challenge' : 'Group'}
-                    </ThemedText>
-                  </View>
-                  <ThemedText style={dynamicStyles.dareTitle} numberOfLines={2}>
-                    {dare.title}
-                  </ThemedText>
-                  <ThemedText style={dynamicStyles.dareDescription} numberOfLines={2}>
-                    {dare.description}
-                  </ThemedText>
-                  <View style={dynamicStyles.dareCardFooter}>
-                    <ThemedText style={dynamicStyles.dareStake}>
-                      ${dare.stake}
-                    </ThemedText>
-                    <View style={[dynamicStyles.statusBadge,
-                      { backgroundColor: dare.status === 'active' ? accentColor :
-                                       dare.status === 'completed' ? '#4CAF50' : '#F44336' }]}>
-                      <ThemedText style={dynamicStyles.statusText}>
-                        {dare.status === 'active' ? 'Active' :
-                         dare.status === 'completed' ? 'Done' : 'Pending'}
-                      </ThemedText>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              ))
-            ) : (
-              <View style={dynamicStyles.emptyContainer}>
-                <Ionicons name="flash-outline" size={64} color={secondaryTextColor} />
-                <ThemedText style={dynamicStyles.emptyText}>No dares yet</ThemedText>
-              </View>
+        {postsLoading ? (
+          <View style={dynamicStyles.emptyContainer}>
+            <ThemedText>Loading posts...</ThemedText>
+          </View>
+        ) : userPosts.length > 0 ? (
+          <FlatList
+            style={dynamicStyles.postsGrid}
+            data={userPosts}
+            keyExtractor={(item) => item.id}
+            numColumns={3}
+            renderItem={({ item }) => (
+              <TouchableOpacity style={dynamicStyles.postItem} onPress={() => navigation.navigate('PostDetails', { post: item })}>
+                <Image source={{ uri: item.image || profileUser.avatar }} style={dynamicStyles.postImage} />
+              </TouchableOpacity>
             )}
+          />
+        ) : (
+          <View style={dynamicStyles.emptyContainer}>
+            <Ionicons name="images-outline" size={64} color={secondaryTextColor} />
+            <ThemedText style={dynamicStyles.emptyText}>No posts yet</ThemedText>
           </View>
         )}
       </ThemedView>
@@ -307,7 +237,12 @@ const getDynamicStyles = (backgroundColor, cardColor, textColor, accentColor, bo
 
   // Profile Header Section
   profileHeader: { alignItems: 'center', padding: 20 },
-  avatar: { width: 80, height: 80, borderRadius: 40, marginBottom: 12, borderWidth: 2, borderColor: accentColor },
+  avatarContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  avatar: { width: 80, height: 80, borderRadius: 40, borderWidth: 2, borderColor: accentColor },
+  avatarStatLeft: { alignItems: 'center', marginRight: 20 },
+  avatarStatRight: { alignItems: 'center', marginLeft: 20 },
+  avatarStatValue: { fontSize: 16, fontWeight: 'bold', color: textColor },
+  avatarStatLabel: { fontSize: 12, color: secondaryTextColor, marginTop: 2 },
   username: { fontSize: 18, fontWeight: '700', marginBottom: 4 },
   bio: { fontSize: 14, textAlign: 'center', marginBottom: 12, color: textColor },
 
@@ -337,75 +272,10 @@ const getDynamicStyles = (backgroundColor, cardColor, textColor, accentColor, bo
   },
   messageText: { fontSize: 14, fontWeight: '600', color: 'white' },
 
-  // Tab Navigation
-  tabContainer: { flexDirection: 'row', borderTopWidth: 0.5, borderTopColor: borderColor, borderBottomWidth: 0.5, borderBottomColor: borderColor, marginTop: 10 },
-  tab: { flex: 1, alignItems: 'center', paddingVertical: 12 },
-  activeTab: { borderBottomWidth: 1, borderBottomColor: accentColor },
-  tabText: { fontSize: 14, color: secondaryTextColor },
-  activeTabText: { color: accentColor },
-
   // Post Grid
   postsGrid: { flex: 1 },
   postItem: { flex: 1, margin: 1 },
   postImage: { width: '100%', aspectRatio: 1 },
-
-  // Dares Grid and Cards
-  daresGrid: {
-    flex: 1,
-    padding: 16,
-  },
-  dareCard: {
-    backgroundColor: cardColor,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: borderColor,
-  },
-  dareCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  dareType: {
-    fontSize: 12,
-    color: accentColor,
-    fontWeight: '600',
-    marginLeft: 6,
-    textTransform: 'uppercase',
-  },
-  dareTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: textColor,
-    marginBottom: 8,
-  },
-  dareDescription: {
-    fontSize: 14,
-    color: secondaryTextColor,
-    marginBottom: 12,
-    lineHeight: 20,
-  },
-  dareCardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  dareStake: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: accentColor,
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusText: {
-    fontSize: 12,
-    color: 'white',
-    fontWeight: '600',
-  },
 
   // Empty State
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },

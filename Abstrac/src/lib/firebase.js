@@ -1,5 +1,5 @@
 import { httpsCallable } from "firebase/functions";
-import { functions } from "../config/firebase";
+import { functions, db, auth } from "../config/firebase";
 import { USE_MOCK } from "../hooks/useDares";
 
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));

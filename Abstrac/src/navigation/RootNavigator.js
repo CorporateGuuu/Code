@@ -89,9 +89,9 @@ function MainTabs() {
 }
 
 const RootNavigator = ({ user }) => {
-  // Always start with LoginScreen - let LoginScreen handle authentication flow
+  // Debug: Temporarily start with Main to avoid auth-related navigation issues
   return (
-    <Stack.Navigator initialRouteName="LoginScreen">
+    <Stack.Navigator initialRouteName="Main">
       <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: true, headerRight: HeaderRight, headerStyle: { backgroundColor: '#000000' }, headerTintColor: '#ffffff', headerTitle: '' }} />
       <Stack.Screen name="Search" component={SearchScreen} options={{ headerShown: true, headerRight: HeaderRight }} />
